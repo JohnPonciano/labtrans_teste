@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lista de Arquivos</title>
+</head>
+<body>
+    
+    <h1>Arquivos Gerados</h1>
+    <h4>Arquivos Disponíveis</h4>
+    <ul id="file-list">
+        <!-- A lista será preenchida aqui dinamicamente -->
+    </ul>
+
+    <script>
+        // Função para fazer uma solicitação AJAX à API
+        function fetchHighwaysData() {
+            fetch('http://127.0.0.1:8000/list-highways/')
+                .then(response => response.json())
+                .then(data => {
+                    const fileList = document.getElementById('file-list');
+
+                    data.forEach(item => {
+                        const listItem = document.createElement('li');
+                        const link = document.createElement('a');
+                        link.href = `/export-csv/${item.highway}`;
+                        link.setAttribute('download', '');
+                        link.textContent = `Highway ${item.highway}`;
+                        listItem.appendChild(link);
+                        fileList.appendChild(listItem);
+                    });
+                })
+                .catch(error => {
+                    console.error('Erro ao obter os dados da API:', error);
+                });
+        }
+
+        // Chame a função para buscar e exibir os dados
+        fetchHighwaysData();
+    </script>
+</body>
+</html>

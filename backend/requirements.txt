@@ -1,0 +1,8 @@
+python-multipart
+fastapi
+flask-cors
+uvicorn
+jinja2
+peewee
+shapely
+psycopg2-binary
