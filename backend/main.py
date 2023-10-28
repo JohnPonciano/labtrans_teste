@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 env = Environment(loader=FileSystemLoader("templates"))
+# FIX COOOORS GOD WHY
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:8080"],
@@ -21,13 +22,10 @@ app.add_middleware(
 )
 
 # Função para listar arquivos exportados
-
 def get_exported_files():
-
     export_folder = Path("export")
     exported_files = [f.name for f in export_folder.iterdir() if f.is_file()]
     return exported_files
-
 
 def calculate_distance_on_line_string(longitudes, latitudes):
     if len(longitudes) != len(latitudes):
@@ -56,6 +54,27 @@ def calculate_distance_on_line_string(longitudes, latitudes):
     distances = float(distances)
     return distances
 # Função para preencher a tabela Rodovias com base nos dados da tabela Results
+
+# Função para calcular a distância em KM usando Shapely
+def calculate_distance(longitudes, latitudes):
+    if len(longitudes) != len(latitudes):
+        raise ValueError("Os arrays de longitude e latitude devem ter o mesmo tamanho")
+
+    # Criando um objeto LineString a partir dos pontos de latitude e longitude
+    line = geometry.LineString(list(zip(longitudes, latitudes)))
+
+    # Armazenando as distâncias normalizadas em uma lista
+    normalized_distances = [line.project(geometry.Point(lon, lat), normalized=True) for lon, lat in zip(longitudes, latitudes)]
+
+    # Calculando o comprimento total da linha em unidades de longitude/latitude
+    total_length = line.length
+
+    # Calculando as distâncias em quilômetros multiplicando as distâncias normalizadas pelo comprimento total da linha
+    distances_in_km = [normalized_distance * total_length for normalized_distance in normalized_distances]
+
+    # Arredondando a distância para o valor mais próximo
+    distances = sum(round(distance) for distance in distances_in_km) / 1000
+    return distances
 
 
 def populate_results_table():
@@ -313,8 +332,6 @@ async def list_highways():
     return highway_data
 
 # Rota para listar rodovia especifica
-
-
 @app.get("/list-highways/{highway}")
 async def list_highways(highway: int):
 
@@ -379,6 +396,8 @@ async def list_highways(highway: int):
         "trinca": trinca_count,
         "placa": placa_count,
         "drenagem": drenagem_count,
+        "longitude": longitudes,
+        "latitudes": latitudes
     }
 
     highway_data.append(highway_item_data)
@@ -386,8 +405,6 @@ async def list_highways(highway: int):
     return highway_data
 
 # Rota para listar todos os arquivos CSV exportados
-
-
 @app.get("/list-exported-csv")
 async def list_exported_csv():
     export_folder = Path("export")
@@ -395,8 +412,6 @@ async def list_exported_csv():
     return exported_files
 
 # Rota para encontrar o quilômetro com a maior incidência de um item em uma rodovia
-
-
 @app.get("/maior-incidencia/{item}")
 async def maior_incidencia(item: str):
     try:
@@ -434,6 +449,47 @@ async def maior_incidencia(item: str):
     except Exception as e:
         return {"error": str(e)}
 
+# Rota para retornar todas as linhas da tabela Highway
+@app.get("/all-rows")
+async def get_all_rows():
+
+    # Consulta para obter todas as linhas da tabela Highway
+    all_rows = Highway.select()
+
+    # Converter os resultados em um formato adequado para retorno
+    rows_list = [
+        {
+            "highway": row.highway,
+            "UF": row.UF,
+            "item": row.item,
+            "latitude": row.latitude,
+            "longitude": row.longitude,
+            "exp_km_calc": row.exp_km_calc
+        }
+        for row in all_rows
+    ]
+
+    return {"all_rows": rows_list}
+
+@app.get("/all-rows/{highway}")
+async def get_all_rows_by_highway(highway: str):
+    # Consulta para obter todas as linhas da tabela Highway com base na estrada específica
+    all_rows = Highway.select().where(Highway.highway == highway)
+
+    # Converter os resultados em um formato adequado para retorno
+    rows_list = [
+        {
+            "highway": row.highway,
+            "UF": row.UF,
+            "item": row.item,
+            "latitude": row.latitude,
+            "longitude": row.longitude,
+            "exp_km_calc": row.exp_km_calc
+        }
+        for row in all_rows
+    ]
+
+    return {"all_rows": rows_list}
 
 if __name__ == "__main__":
     import uvicorn

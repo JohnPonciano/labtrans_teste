@@ -1,17 +1,15 @@
-
 <template>
   <div>
-    <file-upload/> <!-- Adicione o componente de upload aqui -->
+    <file-upload/> <!-- Add the file upload component here -->
   </div>
 </template>
 
 <script>
-/* eslint-disable */
-import FileUpload from "@/components/FileUpload.vue"; // Importe o componente de upload
+import FileUpload from "@/components/FileUpload.vue"; // Import the file upload component
 
 export default {
   components: {
-    FileUpload, // Registre o componente de upload
+    FileUpload, // Register the file upload component
   },
 };
 </script>
