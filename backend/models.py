@@ -1,14 +1,14 @@
 from peewee import Model, PostgresqlDatabase, CharField, FloatField, IntegerField, DateTimeField, SqliteDatabase
 
-db = SqliteDatabase('database.db')
+#db = SqliteDatabase('database.db')
 
-# db = PostgresqlDatabase(
-#     'labtrans_teste',  # Nome do banco de dados
-#     user='admin',  # Nome de usuário do PostgreSQL
-#     password='admin',  # Senha do PostgreSQL
-#     host='localhost',  # Host do PostgreSQL (pode ser 'localhost' se estiver na mesma máquina)
-#     port=5432  # Porta do PostgreSQL (geralmente 5432)
-# )
+db = PostgresqlDatabase(
+    'labtrans_teste',  # Nome do banco de dados
+     user='admin',  # Nome de usuário do PostgreSQL
+     password='admin',  # Senha do PostgreSQL
+     host='localhost',  # Host do PostgreSQL (pode ser 'localhost' se estiver na mesma máquina)
+     port=5432  # Porta do PostgreSQL (geralmente 5432)
+)
 
 class BaseModel(Model):
     class Meta:
