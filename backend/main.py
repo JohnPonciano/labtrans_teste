@@ -464,7 +464,8 @@ async def get_all_rows():
             "item": row.item,
             "latitude": row.latitude,
             "longitude": row.longitude,
-            "exp_km_calc": row.exp_km_calc
+            "exp_km_calc": row.exp_km_calc,
+            'id': row.id
         }
         for row in all_rows
     ]
@@ -484,13 +485,71 @@ async def get_all_rows_by_highway(highway: str):
             "item": row.item,
             "latitude": row.latitude,
             "longitude": row.longitude,
-            "exp_km_calc": row.exp_km_calc
+            "exp_km_calc": row.exp_km_calc,
+            "id": row.id
         }
         for row in all_rows
     ]
 
     return {"all_rows": rows_list}
 
+@app.get("/point/{id}")
+async def get_point_by_id(id: int):
+    all_rows = Highway.select().where(Highway.id == id)
+
+    rows_list = [
+        {
+            "highway": row.highway,
+            "UF": row.UF,
+            "item": row.item,
+            "latitude": row.latitude,
+            "longitude": row.longitude,
+            "exp_km_calc": row.exp_km_calc,
+            "id": row.id
+        }
+        for row in all_rows
+    ]
+
+    return {
+        'point': rows_list
+    }
+
+# Endpoint para editar latitude e longitude de um ponto por ID
+@app.put("/point/{id}")
+async def update_point_by_id(id: int, latitude: float, longitude: float):
+
+    try:
+        db.connect()
+        query = Highway.update(latitude=latitude, longitude=longitude).where(Highway.id == id)
+        query.execute()
+
+        return {"message": "Latitude e Longitude atualizados com sucesso"}
+
+    except Exception as e:
+        return {"error": f"Erro ao atualizar Latitude e Longitude: {e}"}
+
+    finally:
+        if not db.is_closed():
+            db.close()
+
+# Endpoint para deletar um ponto por ID
+@app.delete("/point/{id}")
+async def delete_point_by_id(id: int):
+
+    try:
+        db.connect()
+        query = Highway.delete().where(Highway.id == id)
+        query.execute()
+
+        return {"message": "Ponto deletado com sucesso"}
+
+    except Exception as e:
+        return {"error": f"Erro ao deletar o ponto: {e}"}
+
+    finally:
+        if not db.is_closed():
+            db.close()
+            
 if __name__ == "__main__":
     import uvicorn
     from models import create_tables_if_not_exist

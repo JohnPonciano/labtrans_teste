@@ -30,11 +30,12 @@
 </template>
 
 <script>
+ /* eslint-disable */
 import L from "leaflet";
 
 export default {
   props: {
-    highwayInput: String,
+    highwayInput: Number,
   },
   data() {
     return {
@@ -50,15 +51,30 @@ export default {
     },
   },
   mounted() {
-    this.map = L.map("map").setView([0, 0], 2);
+    // Inicialização do mapa
+    if (!this.map) {
+      this.map = L.map("map",{zoomControl: true,zoom:1,zoomAnimation:false,fadeAnimation:true,markerZoomAnimation:true}).setView([0, 0], 2);
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution:
-        'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
-      maxZoom: 18,
-    }).addTo(this.map);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution:
+          'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+        maxZoom: 18,
+      }).addTo(this.map);
+    }
 
-    this.addMarkersForHighway(); // Load markers on map mount
+    this.addMarkersForHighway(); // Carrega marcadores na montagem do mapa
+
+    // Manipulador para evento de zoom - aqui você pode tentar corrigir o possível erro de zoom
+    this.map.on("zoomend", () => {
+      // Qualquer lógica que você esteja utilizando ao manipular o zoom
+      // Certifique-se de estar usando a instância de mapa correta e evite acessar valores nulos
+      console.log("Zoom Out: ", this.map.getZoom());
+    });
+    this.map.on("zoomstart", () => {
+      // Qualquer lógica que você esteja utilizando ao manipular o zoom
+      // Certifique-se de estar usando a instância de mapa correta e evite acessar valores nulos
+      console.log("Zoom In: ", this.map.getZoom());
+    });
   },
 
   methods: {
@@ -67,47 +83,56 @@ export default {
     },
 
     addMarkersForHighway() {
-  this.isLoading = true;
+      this.isLoading = true;
 
-  fetch(`http://127.0.0.1:8000/all-rows/${this.internalValue}`)
-    .then(response => response.json())
-    .then(data => {
-      const allRows = data.all_rows;
+      fetch(`http://127.0.0.1:8000/all-rows/${this.internalValue}`)
+        .then((response) => response.json())
+        .then((data) => {
+          const allRows = data.all_rows;
 
-      if (this.controlLayers) {
-        this.map.removeControl(this.controlLayers);
-      }
-
-      for (const key in this.allLayers) {
-        if (Object.prototype.hasOwnProperty.call(this.allLayers, key)) {
-          const layer = this.allLayers[key];
-          if (layer) {
-            layer.clearLayers();
+          if (this.controlLayers) {
+            this.map.removeControl(this.controlLayers);
           }
-        }
-      }
 
-      for (const row of allRows) {
-        const popupContent = `Highway: ${row.highway}<br>Item: ${row.item}`;
-        if (!this.allLayers[row.item]) {
-          this.allLayers[row.item] = L.layerGroup().addTo(this.map);
-        }
-        const marker = L.marker([parseFloat(row.latitude), parseFloat(row.longitude)])
-          .addTo(this.allLayers[row.item])
-          .bindPopup(popupContent);
-      }
+          for (const key in this.allLayers) {
+            if (Object.prototype.hasOwnProperty.call(this.allLayers, key)) {
+              const layer = this.allLayers[key];
+              if (layer) {
+                layer.clearLayers();
+              }
+            }
+          }
 
-      this.isLoading = false;
+          for (const row of allRows) {
+            const popupContent = 
+            `Rodovia: ${row.highway}
+            <br> id:${row.id}
+            <br> Item: ${row.item} 
+            <br> Long: ${row.longitude} 
+            <br> Lat: ${row.latitude} `;
+            if (!this.allLayers[row.item]) {
+              this.allLayers[row.item] = L.layerGroup().addTo(this.map);
+            }
+            const marker = L.marker([
+              parseFloat(row.latitude),
+              parseFloat(row.longitude),
+            ])
+              .addTo(this.allLayers[row.item])
+              .bindPopup(popupContent)
+          }
 
-      // Add a control to toggle layers
-      this.controlLayers = L.control.layers(null, this.allLayers).addTo(this.map);
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      this.isLoading = false;
-    });
-},
+          this.isLoading = false;
 
+          // Add a control to toggle layers
+          this.controlLayers = L.control
+            .layers(null, this.allLayers)
+            .addTo(this.map);
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+          this.isLoading = false;
+        });
+    },
 
     filterItems() {
       // Call addMarkersForHighway without passing highwayInput

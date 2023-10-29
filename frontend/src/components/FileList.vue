@@ -3,8 +3,11 @@
     <!-- Parte Superior: Título e Menu de Dropdown -->
     <div class="container">
       <h1 class="display-4 mt-4">Rodovias Disponíveis</h1>
+      <button class='btn btn-secondary btn-block mb-2' @click="openEditForm"> Editar Ponto </button>
       <div class="form-group mt-4">
-        <label for="incidenceDropdown">Selecione a Incidência:</label>
+        
+        <label for="incidenceDropdown">Selecione a Incidência: </label>
+
         <select
           v-model="selectedIncidence"
           @change="handleIncidenceChange"
@@ -19,6 +22,7 @@
           <option value="drenagem">Drenagem</option>
         </select>
       </div>
+
     </div>
     <div class="container container-fluid mt-4">
       <!-- Parte do Meio: Grids de Arquivos -->
@@ -86,41 +90,63 @@
         </div>
       </div>
 
-     <!-- Modal para exibir o mapa -->
-    <div v-if="showMapModal" class="modal " style="display: block;">
-      <div class="modal-dialog"  >
-        <div class="modal-content" >
-          <div class="modal-header">
-            <h5 class="modal-title">Mapa da Rodovia {{ selectedHighway }}</h5>
-            <button @click="closeMapModal" type="button" class="btn-close"></button>
-          </div>
-          <div class="modal-body">
-            <!-- Carrega o componente LMap.vue com a prop "highwayNumber" -->
-            <LMap :highwayInput="selectedHighway" />
+      <!-- Modal para exibir o mapa -->
+      <div v-if="showMapModal" class="modal" style="display: block">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Mapa da Rodovia {{ selectedHighway }}</h5>
+              <button
+                @click="closeMapModal"
+                type="button"
+                class="btn-close"
+              ></button>
+            </div>
+            <div class="modal-body" style="height: 500px">
+              <!-- Carrega o componente LMap.vue com a prop "highwayNumber" -->
+              <LMap :highwayInput="selectedHighway" />
+            </div>
           </div>
         </div>
       </div>
+
+      
     </div>
 
-
+    <div v-if="showEditForm" class="modal" style="display: block">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Editar Ponto</h5>
+          <button @click="closeEditForm" type="button" class="btn-close"></button>
+        </div>
+        <div class="modal-body">
+          <PointForm v-if="showEditForm" />
+        </div>
+      </div>
+    </div>
   </div>
+
   </div>
 </template>
 
 <script>
-import LMap from './LMap.vue'; // Importe o componente LMap.vue
+import LMap from "./LMap.vue"; // Importe o componente LMap.vue
+import PointForm from "./PointForm.vue"
 
 export default {
   components: {
-    LMap // Registre o componente LMap
+    LMap, // Registre o componente LMap
+    PointForm,
   },
   data() {
     return {
       fileList: [],
       selectedHighway: null,
       highwayDetails: {},
-      selectedIncidence: 'todos',
+      selectedIncidence: "todos",
       showMapModal: false,
+      showEditForm: false
     };
   },
   computed: {
@@ -175,7 +201,6 @@ export default {
           console.error("Erro ao fazer o download do arquivo:", error);
         });
     },
-
     // Abre o modal e define a rodovia selecionada
     openMapModal(highwayNumber) {
       this.selectedHighway = highwayNumber; // Defina a rodovia selecionada
@@ -186,6 +211,12 @@ export default {
       this.selectedHighway = null; // Limpa a rodovia selecionada ao fechar o modal
       this.showMapModal = false; // Fecha o modal
     },
-  }
+    openEditForm() {
+      this.showEditForm = true; // Mostra o formulário de edição quando o botão é clicado
+    },
+    closeEditForm(){
+      this.showEditForm = false; // Mostra o formulário de edição quando o botão é clicado
+    }
+  },
 };
 </script>

@@ -5,6 +5,7 @@
 </template>
 
 <script>
+
 import FileUpload from "@/components/FileUpload.vue"; // Import the file upload component
 
 export default {
