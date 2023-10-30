@@ -1,3 +1,4 @@
+from collections import defaultdict
 import csv
 import datetime
 from operator import itemgetter
@@ -77,70 +78,41 @@ def calculate_distance(longitudes, latitudes):
     return distances
 
 
+
 def populate_results_table():
     highways = Highway.select(Highway.highway).distinct()
 
-    # Itere sobre as rodovias
+    # Iterar sobre as rodovias
     for highway in highways:
-        # Tente obter a entrada existente na tabela Results
-        existing_entry = Results.get_or_none(highway=highway.highway)
-
-        # Se a entrada já existe, exclua-a
-        if existing_entry:
-            existing_entry.delete_instance()
-
         results = Highway.select().where(Highway.highway == highway.highway)
 
-        # Inicialize contadores para os tipos de itens
-        buraco_count = 0
-        remendo_count = 0
-        trinca_count = 0
-        placa_count = 0
-        drenagem_count = 0
+        # Inicializar contadores para os tipos de itens por rodovia
+        item_counts = defaultdict(int)
 
-        # Itere sobre os dados para contar as ocorrências
+        # Iterar sobre os dados para contar as ocorrências por tipo de item
         for row in results:
             if row.item == "Buraco":
-                buraco_count += 1
+                item_counts["buraco"] += 1
             elif row.item == "Remendo":
-                remendo_count += 1
+                item_counts["remendo"] += 1
             elif row.item == "Trinca":
-                trinca_count += 1
-            elif row.item == "Placa" or row.item == "Faixa Central":
-                placa_count += 1
-            elif row.item == "Drenagem" or row.item == "Rocada":
-                drenagem_count += 1
+                item_counts["trinca"] += 1
+            elif row.item in ["Placa", "Faixa Central" , "Faixa Lateral"]:
+                item_counts["placa"] += 1
+            elif row.item in ["Drenagem", "Rocada"]:
+                item_counts["drenagem"] += 1
 
-        # Crie uma nova entrada com os valores atualizados
+        # Armazenar os novos dados na tabela Results
         print("Armazenando novos dados no banco!")
         Results.create(
             highway=highway.highway,
-            buraco=buraco_count,
-            remendo=remendo_count,
-            trinca=trinca_count,
-            placa=placa_count,
-            drenagem=drenagem_count,
+            buraco=item_counts["buraco"],
+            remendo=item_counts["remendo"],
+            trinca=item_counts["trinca"],
+            placa=item_counts["placa"],
+            drenagem=item_counts["drenagem"],
             created_at=datetime.now()
         )
-# Rota para renderizar a página de upload HTML
-
-
-@app.get("/upload-page")
-async def upload_page(request: Request):
-    template = env.get_template("upload.html")
-    return HTMLResponse(content=template.render())
-
-# Rota para renderizar a página de lista HTML
-
-
-@app.get("/lista")
-async def lista(request: Request):
-    template = env.get_template("lista.html")
-    files = get_exported_files()
-    return HTMLResponse(content=template.render(files=files))
-
-# Rota para fazer upload do CSV inicial
-
 
 @app.post("/upload-csv/")
 async def upload_csv(file: UploadFile):
@@ -178,86 +150,51 @@ async def upload_csv(file: UploadFile):
         raise HTTPException(status_code=400, detail=str(e))
 
 # Rota para listar dados tratados e fazer download por rodovia
-
-
 @app.get("/export-csv/{highway}")
 async def export_csv(highway: int):
     data = Highway.select().where(Highway.highway == highway)
 
-    # Inicialize contadores para os tipos de itens
-    buraco_count = 0
-    remendo_count = 0
-    trinca_count = 0
-    placa_count = 0
-    drenagem_count = 0
-    longitudes = []
-    latitudes = []
+    data_by_km_exp = defaultdict(lambda: defaultdict(int))  # Dicionário para contar itens por km_exp
 
-    # Itere sobre os dados para contar as ocorrências
+    # Iterar sobre os dados para contar as ocorrências por km_exp
     for row in data:
+        km_exp = row.exp_km_calc
         if row.item == "Buraco":
-            buraco_count += 1
+            data_by_km_exp[km_exp]["buraco"] += 1
         elif row.item == "Remendo":
-            remendo_count += 1
+            data_by_km_exp[km_exp]["remendo"] += 1
         elif row.item == "Trinca":
-            trinca_count += 1
-        elif row.item == "Placa" or row.item == "Faixa Central":
-            placa_count += 1
-        elif row.item == "Drenagem" or row.item == "Rocada":
-            drenagem_count += 1
+            data_by_km_exp[km_exp]["trinca"] += 1
+        elif row.item in ["Placa", "Faixa Central","Faixa Lateral"]:
+            data_by_km_exp[km_exp]["placa"] += 1
+        elif row.item in ["Drenagem", "Rocada"]:
+            data_by_km_exp[km_exp]["drenagem"] += 1
 
-    for i in range(len(data)):
-        latitude = data[i].latitude
-        if isinstance(latitude, float):
-            latitudes.append(latitude)
-        elif isinstance(latitude, str):
-            latitude = latitude.replace(".", "").strip()
-            latitude = f"{latitude[:-6]}.{latitude[-6:]}"
-            latitude = float(latitude)
-            latitudes.append(latitude)
-        else:
-            raise ValueError(
-                f"Unexpected type for longitude: {type(latitude)}")
+    # Preparar os dados para escrita no arquivo CSV
+    output_data = []
+    for km_exp, item_counts in data_by_km_exp.items():
+        output_data.append({
+            "highway": highway,
+            "Km": km_exp,
+            "buraco": item_counts["buraco"],
+            "remendo": item_counts["remendo"],
+            "trinca": item_counts["trinca"],
+            "placa": item_counts["placa"],
+            "drenagem": item_counts["drenagem"]
+        })
 
-    for i in range(len(data)):
-        longitude = data[i].longitude
-        if isinstance(longitude, float):
-            longitudes.append(longitude)
-        elif isinstance(longitude, str):
-            longitude = longitude.replace(".", "").strip()
-            longitude = f"{longitude[:-6]}.{longitude[-6:]}"
-            longitude = float(longitude)
-            longitudes.append(longitude)
-        else:
-            raise ValueError(
-                f"Unexpected type for longitude: {type(longitude)}")
-
-    distances = calculate_distance_on_line_string(longitudes, latitudes)
-
-    # Defina os campos do arquivo de saída
-    output_data = {
-        "highway": highway,
-        "km_exp": data[0].exp_km_calc,
-        "Km": distances,
-        "buraco": buraco_count,
-        "remendo": remendo_count,
-        "trinca": trinca_count,
-        "placa": placa_count,
-        "drenagem": drenagem_count  # Adicione +1 em drenagem para o item "Rocada"
-    }
-    print('Dados Tratados! ')
-    print(output_data)
+    # Nome do arquivo CSV
     filename = f"export/Result_{datetime.now():%Y_%m}_highway_{highway}.csv"
+    
+    # Escrever os dados no arquivo CSV
     with open(filename, "w", newline="") as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=output_data.keys())
+        fieldnames = output_data[0].keys()
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
-        writer.writerow(output_data)
+        writer.writerows(output_data)
 
     return FileResponse(filename)
-
 # Rota para listar todas as rodovias disponíveis com contagem de itens
-
-
 @app.get("/list-highways")
 async def list_highways():
 
@@ -284,7 +221,7 @@ async def list_highways():
                 remendo_count += 1
             elif row.item == "Trinca":
                 trinca_count += 1
-            elif row.item == "Placa" or row.item == "Faixa Central":
+            elif row.item == "Placa" or row.item == "Faixa Central" or row.item == "Faixa Lateral":
                 placa_count += 1
             elif row.item == "Drenagem" or row.item == "Rocada":
                 drenagem_count += 1
